@@ -1,0 +1,24 @@
+#version 450
+// Puts what DLSS Neural Rendering changed back onto the full-resolution picture: the difference
+// between its output and its (shrunk) input, scaled up, is added to DLAA's output. The picture keeps
+// its own sharpness; the network contributes the relighting and material detail it adds.
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(set = 0, binding = 0) uniform sampler2D base_tex; // DLAA output, full resolution
+layout(set = 0, binding = 1) uniform sampler2D nr_in;	  // what the network was given (linear filtering)
+layout(set = 0, binding = 2) uniform sampler2D nr_out;	  // what it returned (linear filtering)
+layout(set = 0, binding = 3, rgba8) uniform writeonly image2D result;
+layout(push_constant) uniform PC {
+	vec2 size;	// full resolution
+	float strength; // 1 = the network's change as it is
+} pc;
+
+void main()
+{
+	ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(pc.size.x) || p.y >= int(pc.size.y))
+		return;
+	vec2 uv = (vec2(p) + 0.5) / pc.size;
+	vec4 c = texelFetch(base_tex, p, 0);
+	vec3 delta = texture(nr_out, uv).rgb - texture(nr_in, uv).rgb;
+	imageStore(result, p, vec4(clamp(c.rgb + delta * pc.strength, 0.0, 1.0), c.a));
+}

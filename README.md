@@ -1,0 +1,76 @@
+# mhgu-dlss
+
+NVIDIA DLSS for MHGU Recomp: DLAA (DLSS as anti-aliasing, with camera motion vectors and sub-pixel jitter) and,
+on top of it, DLSS 5 neural rendering. It's a `vulkan-1.dll` proxy next to `mhgurecomp.exe` that forwards every
+Vulkan call to the system's loader and adds the DLSS passes to the game's frame. Private: the DLSS 5 runtime it
+talks to isn't public.
+
+**Off by default.** Nothing changes until you switch it on in the Forge menu.
+
+## Install
+
+Next to `mhgurecomp.exe`:
+
+- `vulkan-1.dll` and `mhgudlss_nvngx.dll` from `build/` (or `sh build.sh --install`)
+- NVIDIA's `nvngx_dlss.dll` (DLSS/DLAA) and, for neural rendering, `nvngx_dlssnr.dll`: not in this repository,
+  bring your own.
+
+Needs an NVIDIA RTX card and a current driver. Uninstall: delete `vulkan-1.dll` and `mhgudlss_nvngx.dll`.
+
+## Forge menu
+
+Press **Insert** in game, open **Plugin UI** and then **DLSS**:
+
+- **DLAA**: on/off. While it's on the game's FXAA is off.
+- **DLAA model**: Default, J, K, L or M (NVIDIA's presets; K is the usual one for DLAA). Switching rebuilds
+  the DLSS feature on the next frame.
+- **Camera motion vectors**: on keeps scenery and fog clean in motion; off is only for comparing.
+- **DLSS 5 neural rendering**: on/off, runs after DLAA.
+- **Neural rendering model**: Default, A or B. Runtime 310.9.16 has two networks (B is its default, newer and
+  faster; A is the previous one); 310.8 has one and ignores this. The menu shows the runtime's version.
+- **Neural rendering preset**: Light, Moderate, Default, Reference, Overdrive.
+- **Neural rendering strength**: 0 (none) to 2 (doubled); 1 is what the network made.
+
+Every change is saved right away to `[DLSS]` in `mhgurecomp.ini` and used at the next start. Home and End still
+switch DLAA and neural rendering while playing (`ToggleKey`, `NRToggleKey`, not saved: they're for comparing).
+
+## mhgurecomp.ini
+
+All keys are optional; the menu writes the ones it changes. Defaults in brackets.
+
+```ini
+[DLSS]
+Mode = Off              ; Off or DLAA [Off]
+Preset = Default        ; Default, J, K, L, M
+MotionVectors = Camera  ; Camera or Off
+ToggleKey = Home        ; Home, End, PageUp, PageDown, Pause, ScrollLock, F1-F24 or None
+NeuralRendering = Off   ; On or Off [Off]
+NRModel = Default       ; Default, A or B
+NRPreset = Default      ; Light, Moderate, Default, Reference, Overdrive
+NRStrength = 1.0        ; 0 to 2
+NRToggleKey = End
+```
+
+`mhgu-dlss.log` next to the exe says what it found and what failed.
+
+## Build
+
+Needs Zig (`ZIG=`, default `H:/Games/MHGU/tools/zig-x86_64-windows-0.17.0/zig.exe`), Python 3 with `pefile`,
+the Vulkan headers and NVIDIA's DLSS SDK headers (`SDK=`, default `H:/Games/MHGU/tools/sdk` with
+`vulkan-headers/include` and `dlss/include`).
+
+```sh
+sh build.sh            # build/vulkan-1.dll, build/mhgudlss_nvngx.dll
+sh build.sh --install  # and copy them next to mhgurecomp.exe
+python shaders/compile.py  # after changing a shader: rewrites src/shaders.h
+```
+
+`gen_exports.py` writes `src/exports.S` (forwarders for every export of the system `vulkan-1.dll`) on each
+build. `FRAME.md` is the map of the game's render passes the insertion points come from.
+
+## How the menu gets in
+
+`mhgurecomp.exe` exports its ImGui (cimgui names) and `forge_imgui_run`, which draws the Forge plugins' entries.
+The overlay calls that once inside "Plugin UI"; the proxy points that one call at a small stub that runs it and
+then draws the DLSS entry. If the exe is another build and the call isn't found, the log says so and the ini
+keeps working as before.

@@ -1,0 +1,23 @@
+#version 450
+// Camera motion vectors: each pixel's position is rebuilt from depth with this frame's view-projection
+// and projected with the previous frame's. Objects that move by themselves are not covered.
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(set = 0, binding = 0) uniform sampler2D depth_tex;
+layout(set = 0, binding = 1, rg16f) uniform writeonly image2D mv_out;
+layout(push_constant) uniform PC {
+	mat4 cur_to_prev; // clip space of this frame -> clip space of the previous frame
+	vec2 size;	  // render size in pixels
+	vec2 jitter;	  // this frame's sub-pixel offset in pixels (+x right, +y down)
+} pc;
+
+void main()
+{
+	ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(pc.size.x) || p.y >= int(pc.size.y))
+		return;
+	float d = texelFetch(depth_tex, p, 0).r;
+	vec2 pix = vec2(p) + 0.5 - pc.jitter; // where this sample is without jitter
+	vec4 q = pc.cur_to_prev * vec4(pix / pc.size * 2.0 - 1.0, d, 1.0);
+	vec2 prev = (q.xy / q.w * 0.5 + 0.5) * pc.size;
+	imageStore(mv_out, p, vec4(q.w > 0.0 ? prev - pix : vec2(0.0), 0.0, 0.0));
+}

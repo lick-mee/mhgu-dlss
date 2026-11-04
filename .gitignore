@@ -1,0 +1,11 @@
+# build output and generated forwarders
+build/
+src/exports.S
+# NVIDIA's runtimes are never part of this repository
+*.dll
+*.lib
+*.pdb
+# local leftovers
+*.bak
+*.log
+__pycache__/
