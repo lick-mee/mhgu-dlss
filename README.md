@@ -7,9 +7,8 @@ talks to isn't public.
 
 **Off by default.** Nothing changes until you switch it on in the Forge menu.
 
-**Interactive guide:** [`docs/index.html`](docs/index.html) has a comparison slider with a loupe on real game
-pixels, the install steps and a working copy of the Forge menu. GitHub shows HTML files of a private repository
-as source only, so download the repository (Code → Download ZIP) and open that file in your browser.
+**Illustrated guide:** the release zip has a `mhgu-dlss-guide` folder; open its `index.html` in your browser for
+a before/after comparison you can zoom into, the install steps and a working copy of the in-game menu.
 
 ## What it changes
 
