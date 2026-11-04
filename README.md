@@ -13,33 +13,19 @@ as source only, so download the repository (Code → Download ZIP) and open that
 
 ## What it changes
 
-The hunter's house at 4K: off, DLAA, DLAA + neural rendering.
+![DLAA smooths the edges: off on the left, DLAA on the right, with the chest strap zoomed below](docs/img/card-house-dlaa.webp)
 
-![Off, DLAA, DLAA and neural rendering](docs/img/house-strip.webp)
+Up close it's easy to see: the same spot switching between off and DLAA. The stair steps along the blade go away.
 
-Up close, game pixels drawn twice as large. Left off, right DLAA: the stair-stepped edges go, the detail stays.
+![The blade edge, switching between off and DLAA](docs/img/flip-blade.webp)
 
-The strap on the chest:
+Neural rendering on top of DLAA relights the scene and brings out the materials:
 
-![Chest strap, off and DLAA](docs/img/zoom-chest.png)
+![The hunter's house, switching between DLAA and DLAA with neural rendering](docs/img/flip-house-nr.webp)
 
-The edge of the hunter's blade:
+On the character screen (neural rendering doesn't run there):
 
-![Blade edge, off and DLAA](docs/img/zoom-blade.png)
-
-### Character screen
-
-Off and DLAA (neural rendering doesn't run on this screen).
-
-![Character screen, off and DLAA](docs/img/select-strip.webp)
-
-The sword:
-
-![Sword, off and DLAA](docs/img/zoom-sword.png)
-
-Sleeve, belt and cloth (the hunter sways a little between the two shots):
-
-![Sleeve and cloth, off and DLAA](docs/img/zoom-shield.png)
+![Character screen: off on the left, DLAA on the right, with the sword zoomed below](docs/img/card-select-dlaa.webp)
 
 ## Install
 
