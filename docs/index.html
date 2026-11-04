@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mhgu-dlss</title>
+<meta name="description" content="DLAA and DLSS 5 neural rendering for MHGU Recomp: what it changes, how to install it, how to switch it on in game.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Rubik:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: dark;
+  --slate: #22302f;      /* the character screen's stone */
+  --slate-deep: #182221;
+  --slate-lift: #2c3d3b;
+  --parchment: #efe3c2;  /* text */
+  --parchment-dim: #b9b199;
+  --amber: #f5b83d;      /* the game's selection frame: everything you can use */
+  --meadow: #78b04a;     /* on */
+  --line: rgba(239, 227, 194, .16);
+  --imgui-bg: rgba(21, 26, 33, .94);
+  --imgui-head: #294a7a;
+  --imgui-frame: #1f3550;
+  --imgui-accent: #4296fa;
+  --display: "Rubik", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --gutter: clamp(16px, 4vw, 48px);
+}
+* { box-sizing: border-box; }
+html { background: var(--slate-deep); }
+body {
+  margin: 0;
+  background: var(--slate);
+  color: var(--parchment);
+  font: 400 1.0625rem/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--amber); }
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; margin: 0; }
+h2 { font-size: clamp(1.75rem, 3.2vw, 2.5rem); font-weight: 800; letter-spacing: -.01em; }
+h3 { font-size: 1.15rem; font-weight: 700; }
+p { margin: 0; }
+code, kbd { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .9em; }
+code { background: var(--slate-deep); padding: .1em .35em; border-radius: 4px; }
+kbd {
+  display: inline-block; min-width: 1.8em; padding: .05em .45em; text-align: center;
+  background: var(--parchment); color: var(--slate-deep); border-radius: 5px;
+  box-shadow: inset 0 -3px 0 var(--parchment-dim); font-weight: 700;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); }
+section { padding: clamp(56px, 8vw, 104px) 0; }
+section + section { border-top: 1px solid var(--line); }
+.lede { color: var(--parchment-dim); max-width: 62ch; margin-top: 14px; }
+
+/* ---- hero: the comparison ---- */
+.hero { padding-top: clamp(28px, 4vw, 48px); }
+.title-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 20px; }
+.title-row h1 { font-size: clamp(2.4rem, 6vw, 4.25rem); font-weight: 800; letter-spacing: -.02em; }
+.title-row p { color: var(--parchment-dim); max-width: 44ch; }
+.viewer { display: grid; grid-template-columns: minmax(0, 1fr) clamp(260px, 30%, 380px); gap: 18px; align-items: start; }
+.compare {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px;
+  background: var(--slate-deep); cursor: crosshair; touch-action: pan-y; user-select: none;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.compare img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.compare .after { clip-path: inset(0 0 0 var(--split, 50%)); }
+.divider {
+  position: absolute; top: 0; bottom: 0; left: var(--split, 50%); width: 3px; margin-left: -1.5px;
+  background: var(--parchment); box-shadow: 0 0 0 1px rgba(0,0,0,.35); pointer-events: none;
+}
+.grip {
+  position: absolute; top: 50%; left: var(--split, 50%); width: 44px; height: 44px; margin: -22px 0 0 -22px;
+  border-radius: 50%; background: var(--parchment); color: var(--slate-deep); display: grid; place-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,.45); cursor: ew-resize; touch-action: none;
+}
+.grip svg { width: 22px; height: 22px; }
+.tag {
+  position: absolute; top: 12px; padding: 4px 10px; border-radius: 6px; font: 700 .9rem var(--display);
+  background: rgba(24, 34, 33, .82); color: var(--parchment); pointer-events: none;
+}
+/* the labels ride along the divider, clear of the game's HUD in the corners */
+.tag.left { right: calc(100% - var(--split, 50%) + 12px); }
+.tag.right { left: calc(var(--split, 50%) + 12px); color: var(--amber); }
+.marker {
+  position: absolute; width: 16%; aspect-ratio: 16 / 9; border: 2px solid var(--amber); border-radius: 6px;
+  transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,.12);
+  transition: left .25s ease, top .25s ease;
+}
+.split-range { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.loupe { display: grid; gap: 10px; }
+.lens { position: relative; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background-repeat: no-repeat; box-shadow: 0 0 0 1px var(--line); image-rendering: pixelated; }
+.lens.on { box-shadow: 0 0 0 2px var(--amber); }
+.lens span { position: absolute; left: 8px; top: 8px; padding: 2px 8px; border-radius: 5px; font: 700 .85rem var(--display); background: rgba(24,34,33,.85); }
+.lens.on span { color: var(--amber); }
+.loupe-note { color: var(--parchment-dim); font-size: .92rem; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 12px 28px; margin-top: 18px; align-items: center; }
+.group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.group > b { font: 700 .95rem var(--display); color: var(--parchment-dim); margin-right: 4px; }
+.chip {
+  font: 500 .95rem var(--display); color: var(--parchment); background: var(--slate-lift);
+  border: 2px solid transparent; border-radius: 999px; padding: 7px 14px; cursor: pointer;
+}
+.chip:hover { border-color: var(--line); }
+.chip[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); background: rgba(245, 184, 61, .08); }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+.scene-note { color: var(--parchment-dim); font-size: .92rem; min-height: 1.6em; margin-top: 10px; }
+
+/* ---- install ---- */
+.install { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 72px); margin-top: 40px; align-items: start; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; counter-reset: step; }
+.step { display: grid; grid-template-columns: 52px 1fr; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.step:last-child { border-bottom: 0; }
+.tick {
+  width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--parchment-dim); background: none;
+  color: var(--parchment); font: 800 1.15rem var(--display); cursor: pointer; display: grid; place-items: center;
+}
+.tick::before { counter-increment: step; content: counter(step); }
+.step.done .tick { border-color: var(--meadow); background: var(--meadow); color: var(--slate-deep); }
+.step.done .tick::before { content: "✓"; }
+.step p { color: var(--parchment-dim); margin-top: 6px; max-width: 58ch; }
+.step.done h3 { color: var(--parchment-dim); }
+.btn {
+  display: inline-block; margin-top: 12px; padding: 10px 18px; border-radius: 8px; text-decoration: none;
+  font: 700 1rem var(--display); background: var(--amber); color: var(--slate-deep);
+}
+.folder { background: var(--slate-deep); border-radius: 10px; padding: 20px 22px; position: sticky; top: 20px; }
+.folder h3 { display: flex; align-items: center; gap: 10px; }
+.folder h3 svg { width: 22px; height: 22px; color: var(--amber); }
+.tree { list-style: none; margin: 14px 0 0; padding: 0; font: .95rem/1.9 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.tree li { display: flex; justify-content: space-between; gap: 12px; padding-left: 14px; border-left: 1px solid var(--line); }
+.tree .who { font-family: var(--body); font-size: .85rem; color: var(--parchment-dim); white-space: nowrap; }
+.tree .new { color: var(--meadow); }
+.tree li[hidden] { display: none; }
+.tree li.fresh { animation: arrive .5s ease; }
+@keyframes arrive { from { background: rgba(120, 176, 74, .25); } to { background: transparent; } }
+.folder-note { margin-top: 14px; font-size: .92rem; color: var(--parchment-dim); }
+
+/* ---- in game: the Forge menu ---- */
+.ingame { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); margin-top: 40px; align-items: start; }
+.screen {
+  position: relative; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden;
+  background: center / cover url("img/house-off.webp"); box-shadow: 0 0 0 1px var(--line);
+}
+.screen .press {
+  position: absolute; inset: auto 0 0 0; display: flex; justify-content: center; padding: 18px;
+  background: linear-gradient(transparent, rgba(0,0,0,.55));
+}
+.screen .press[hidden] { display: none; }
+.screen .press button {
+  font: 700 1.05rem var(--display); color: var(--slate-deep); background: var(--amber);
+  border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer;
+}
+.forge {
+  position: absolute; left: 4%; top: 6%; width: min(560px, 74%); max-height: 88%; overflow: auto;
+  background: var(--imgui-bg); border: 1px solid #43434f; border-radius: 4px;
+  font: 13px/1.45 "Segoe UI", system-ui, sans-serif; color: #fff;
+  transform-origin: top left; animation: open .18s ease;
+}
+.forge[hidden] { display: none; }
+@keyframes open { from { opacity: 0; transform: scale(.97); } }
+.forge .bar { background: var(--imgui-head); padding: 3px 8px; display: flex; gap: 6px; align-items: center; }
+.forge .bar::before { content: "▼"; font-size: 9px; }
+.forge .body { padding: 6px 8px 10px; display: grid; gap: 4px; }
+.fhead, .fnode {
+  all: unset; display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 3px 6px; border-radius: 2px;
+}
+.fhead { background: rgba(66, 150, 250, .31); }
+.fhead:hover, .fnode:hover { background: rgba(66, 150, 250, .5); }
+.fhead:focus-visible, .fnode:focus-visible { outline: 2px solid var(--amber); }
+.arrow { font-size: 9px; width: 10px; transition: transform .15s; }
+[aria-expanded="true"] > .arrow { transform: rotate(90deg); }
+.fcontent { padding-left: 14px; display: grid; gap: 5px; }
+.fcontent[hidden] { display: none; }
+.fdim { color: #8a8f99; padding: 2px 6px; }
+.frow { display: flex; align-items: center; gap: 8px; padding-left: 6px; }
+.frow label { cursor: pointer; }
+.fcheck { appearance: none; width: 18px; height: 18px; margin: 0; background: var(--imgui-frame); border-radius: 2px; cursor: pointer; flex: none; display: grid; place-items: center; }
+.fcheck:checked::after { content: ""; width: 9px; height: 5px; border: solid var(--imgui-accent); border-width: 0 0 2.5px 2.5px; transform: translateY(-1px) rotate(-45deg); }
+.fsel, .frange { flex: none; width: 46%; }
+.fsel { appearance: none; background: var(--imgui-frame) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 7px center; color: #fff; border: 0; border-radius: 2px; padding: 3px 24px 3px 6px; font: inherit; cursor: pointer; }
+.frange { accent-color: var(--imgui-accent); }
+.fsep { height: 1px; background: #43434f; margin: 4px 0; }
+.ftext { padding-left: 6px; }
+.ftext.dim { color: #a6abb5; }
+.fval { width: 3ch; text-align: right; color: #cfd4dc; }
+
+.explain { display: grid; gap: 20px; }
+.explain .now { min-height: 7.5em; padding: 18px 20px; border-radius: 10px; background: var(--slate-lift); }
+.explain .now h3 { color: var(--amber); }
+.explain .now p { margin-top: 8px; color: var(--parchment); }
+.ini { background: var(--slate-deep); border-radius: 10px; padding: 16px 20px; }
+.ini h3 { font-size: 1rem; }
+.ini pre { margin: 10px 0 0; font: .92rem/1.7 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; color: var(--parchment); }
+.ini .changed { color: var(--meadow); }
+.ini .empty { color: var(--parchment-dim); font-family: var(--body); }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px 40px; margin-top: 36px; }
+.facts p { color: var(--parchment-dim); margin-top: 8px; }
+footer { padding: 32px 0 48px; color: var(--parchment-dim); font-size: .92rem; border-top: 1px solid var(--line); }
+
+@media (max-width: 900px) {
+  .viewer, .install, .ingame { grid-template-columns: 1fr; }
+  .loupe { grid-template-columns: 1fr 1fr; }
+  .loupe-note { grid-column: 1 / -1; }
+  .folder { position: static; }
+  /* the picture grows with the menu so it stays usable on a phone */
+  .screen { aspect-ratio: auto; min-height: 56vw; }
+  .forge { position: relative; left: auto; top: auto; width: auto; max-height: none; margin: 12px; }
+}
+@media (max-width: 520px) {
+  .fsel, .frange { width: 42%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<main>
+<section class="hero">
+  <div class="wrap">
+    <div class="title-row">
+      <h1>mhgu-dlss</h1>
+      <p>NVIDIA DLAA and DLSS 5 neural rendering for Monster Hunter Generations Ultimate on MHGU Recomp.</p>
+    </div>
+
+    <div class="viewer">
+      <div class="compare" id="compare" aria-label="Screenshot comparison">
+        <img class="before" id="imgBefore" alt="">
+        <img class="after" id="imgAfter" alt="">
+        <div class="marker" id="marker"></div>
+        <div class="divider"></div>
+        <span class="tag left">Off</span>
+        <span class="tag right" id="tagRight">DLAA</span>
+        <div class="grip" id="grip" role="slider" tabindex="0" aria-label="Comparison divider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg>
+        </div>
+      </div>
+
+      <div class="loupe" aria-live="polite">
+        <div class="lens" id="lensOff"><span>Off</span></div>
+        <div class="lens on" id="lensOn"><span id="lensOnTag">DLAA</span></div>
+        <p class="loupe-note">Real game pixels, each drawn twice as large. Click anywhere on the picture to look there, or pick a spot below.</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="group" role="group" aria-label="Scene">
+        <b>Scene</b>
+        <button class="chip" data-scene="house" aria-pressed="true">Hunter's house</button>
+        <button class="chip" data-scene="select" aria-pressed="false">Character select</button>
+      </div>
+      <div class="group" role="group" aria-label="Right side">
+        <b>Right side</b>
+        <button class="chip" data-mode="dlaa" aria-pressed="true">DLAA</button>
+        <button class="chip" data-mode="nr" aria-pressed="false">DLAA + neural rendering</button>
+      </div>
+      <div class="group" role="group" aria-label="Zoom spot" id="spots"></div>
+    </div>
+    <p class="scene-note" id="sceneNote"></p>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install it</h2>
+    <p class="lede">Four steps, no tools to install. Tick each one off as you go; the folder on the right shows what should be next to the game by then.</p>
+
+    <div class="install">
+      <ol class="steps" id="steps">
+        <li class="step" data-step="1">
+          <button class="tick" aria-label="Mark step 1 done"></button>
+          <div>
+            <h3>Download the zip</h3>
+            <p>From the repository's Releases: <code>mhgu-dlss-v1.0.0.zip</code>.</p>
+            <a class="btn" href="https://github.com/lick-mee/mhgu-dlss/releases/latest">Open Releases</a>
+          </div>
+        </li>
+        <li class="step" data-step="2">
+          <button class="tick" aria-label="Mark step 2 done"></button>
+          <div>
+            <h3>Extract it next to mhgurecomp.exe</h3>
+            <p>Into the game's own folder, not into <code>mods</code>. Two DLLs and a short readme land there.</p>
+          </div>
+        </li>
+        <li class="step" data-step="3">
+          <button class="tick" aria-label="Mark step 3 done"></button>
+          <div>
+            <h3>Add NVIDIA's DLLs</h3>
+            <p><code>nvngx_dlss.dll</code> for DLAA, and <code>nvngx_dlssnr.dll</code> if you want neural rendering. They're NVIDIA's files and aren't in the zip; put them in the same folder.</p>
+          </div>
+        </li>
+        <li class="step" data-step="4">
+          <button class="tick" aria-label="Mark step 4 done"></button>
+          <div>
+            <h3>Start the game</h3>
+            <p>Nothing changes yet: everything starts switched off. You turn it on in the Forge menu, shown below.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="folder">
+        <h3><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2h8.4A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></svg>Windows-MHGURecomp</h3>
+        <ul class="tree" id="tree">
+          <li>mhgurecomp.exe <span class="who">the game</span></li>
+          <li>mhgurecomp.ini <span class="who">its settings</span></li>
+          <li>mods\ <span class="who">other mods</span></li>
+          <li class="new" data-after="2" hidden>vulkan-1.dll <span class="who">from the zip</span></li>
+          <li class="new" data-after="2" hidden>mhgudlss_nvngx.dll <span class="who">from the zip</span></li>
+          <li class="new" data-after="2" hidden>mhgu-dlss-README.txt <span class="who">from the zip</span></li>
+          <li class="new" data-after="3" hidden>nvngx_dlss.dll <span class="who">NVIDIA</span></li>
+          <li class="new" data-after="3" hidden>nvngx_dlssnr.dll <span class="who">NVIDIA, optional</span></li>
+          <li class="new" data-after="4" hidden>mhgu-dlss.log <span class="who">written at start</span></li>
+        </ul>
+        <p class="folder-note" id="folderNote">Needs an NVIDIA RTX card and a current driver.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ingame">
+  <div class="wrap">
+    <h2>Switch it on in game</h2>
+    <p class="lede">Press <kbd>Insert</kbd> to open the Forge menu, open <b>Plugin UI</b>, then <b>DLSS</b>. Try it here: this menu works like the real one, and the panel on the right shows what gets saved.</p>
+
+    <div class="ingame">
+      <div class="screen" id="screen">
+        <div class="forge" id="forge" hidden aria-label="Forge menu">
+          <div class="bar">forge</div>
+          <div class="body">
+            <button class="fhead" id="hPlugins" aria-expanded="false" aria-controls="cPlugins"><span class="arrow">▶</span>Plugin UI</button>
+            <div class="fcontent" id="cPlugins" hidden>
+              <span class="fdim">Your other Forge plugins are listed here too.</span>
+              <button class="fnode" id="hDlss" aria-expanded="false" aria-controls="cDlss"><span class="arrow">▶</span>DLSS</button>
+              <div class="fcontent" id="cDlss" hidden>
+                <div class="frow"><input type="checkbox" class="fcheck" id="dlaa" data-help="dlaa"><label for="dlaa">DLAA (DLSS anti-aliasing; the game's FXAA goes off)</label></div>
+                <div class="frow"><select class="fsel" id="preset" data-help="preset"><option>Default</option><option>J</option><option>K</option><option>L</option><option>M</option></select><label for="preset">DLAA model</label></div>
+                <div class="frow"><input type="checkbox" class="fcheck" id="mv" data-help="mv" checked><label for="mv">Camera motion vectors (clean scenery and fog in motion)</label></div>
+                <div class="fsep"></div>
+                <div class="frow"><input type="checkbox" class="fcheck" id="nr" data-help="nr"><label for="nr">DLSS 5 neural rendering (runs after DLAA)</label></div>
+                <div class="frow"><select class="fsel" id="model" data-help="model"><option>Default</option><option>A</option><option>B</option></select><label for="model">Neural rendering model</label></div>
+                <p class="ftext dim">Runtime 310.9.16.0: Default is B, the newer and faster one; A is the previous</p>
+                <div class="frow"><select class="fsel" id="nrpreset" data-help="nrpreset"><option>Light</option><option>Moderate</option><option selected>Default</option><option>Reference</option><option>Overdrive</option></select><label for="nrpreset">Neural rendering preset</label></div>
+                <div class="frow"><input type="range" class="frange" id="strength" data-help="strength" min="0" max="2" step="0.05" value="1"><span class="fval" id="strengthVal">1.00</span><label for="strength">Neural rendering strength</label></div>
+                <p class="ftext" id="status">Now: DLAA off, neural rendering off</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="press" id="press"><button id="insertBtn">Press <kbd>Insert</kbd></button></div>
+      </div>
+
+      <div class="explain">
+        <div class="now" id="help">
+          <h3>Open the menu</h3>
+          <p>Press <kbd>Insert</kbd> on your keyboard, or the button on the picture. In the real game the menu opens over whatever you're doing.</p>
+        </div>
+        <div class="ini">
+          <h3>Saved in mhgurecomp.ini</h3>
+          <pre id="ini"></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="facts">
+      <div>
+        <h3>Nothing to restart</h3>
+        <p>Every switch takes effect on the next frame, and every change is saved right away. Delete the <code>[DLSS]</code> lines in <code>mhgurecomp.ini</code> to start over with everything off.</p>
+      </div>
+      <div>
+        <h3>When something's missing</h3>
+        <p>The menu says so if DLSS can't run. <code>mhgu-dlss.log</code> next to the game lists what was found and what failed, such as a missing <code>nvngx_dlss.dll</code>.</p>
+      </div>
+      <div>
+        <h3>Uninstall</h3>
+        <p>Delete <code>vulkan-1.dll</code> and <code>mhgudlss_nvngx.dll</code>. The game runs as before; the settings in the ini are ignored.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">Screenshots from MHGU Recomp at 3840 x 2160 (4K), saved as high-quality WebP. Neural rendering doesn't run on the character screen.</div>
+</footer>
+
+<script>
+(function () {
+  const scenes = {
+    house: {
+      off: "img/house-off.webp", dlaa: "img/house-dlaa.webp", nr: "img/house-nr.webp",
+      spots: [["Chest strap", .326, .468], ["Blade edge", .417, .727], ["Cooking pot", .409, .361]],
+      note: "The hunter's house, the same frame three times. The steam over the pot moves on its own."
+    },
+    select: {
+      off: "img/select-off.webp", dlaa: "img/select-dlaa.webp", nr: null,
+      spots: [["Sword", .805, .61], ["Shield edge", .655, .42], ["Belt and cloth", .66, .30]],
+      note: "Neural rendering doesn't run on the character screen, so it's DLAA only here."
+    }
+  };
+  const $ = (id) => document.getElementById(id);
+  const compare = $("compare"), grip = $("grip"), marker = $("marker");
+  const lensOff = $("lensOff"), lensOn = $("lensOn");
+  let scene = "house", mode = "dlaa", spot = scenes.house.spots[0].slice(1), split = 50;
+  const NATIVE = 3840, PIXEL = 2; // the screenshots' width; screen pixels per game pixel in the loupe
+
+  function setSplit(v) {
+    split = Math.max(0, Math.min(100, v));
+    compare.style.setProperty("--split", split + "%");
+    grip.setAttribute("aria-valuenow", Math.round(split));
+  }
+  // The loupe shows real game pixels, each as PIXEL x PIXEL screen pixels.
+  function lens(el, src) {
+    const w = el.clientWidth || 360, h = el.clientHeight || 203;
+    const bw = NATIVE * PIXEL, bh = bw * 9 / 16;
+    const x = Math.max(0, Math.min(bw - w, spot[0] * bw - w / 2));
+    const y = Math.max(0, Math.min(bh - h, spot[1] * bh - h / 2));
+    el.style.backgroundImage = "url(" + src + ")";
+    el.style.backgroundSize = bw + "px " + bh + "px";
+    el.style.backgroundPosition = -x + "px " + -y + "px";
+    // the marker on the picture outlines the same area
+    marker.style.width = (w / bw * 100) + "%";
+  }
+  addEventListener("resize", () => render());
+  function render() {
+    const s = scenes[scene];
+    if (!s[mode]) mode = "dlaa";
+    const right = s[mode];
+    $("imgBefore").src = s.off;
+    $("imgAfter").src = right;
+    $("imgBefore").alt = "Without DLSS";
+    $("imgAfter").alt = mode === "nr" ? "With DLAA and neural rendering" : "With DLAA";
+    const label = mode === "nr" ? "DLAA + neural rendering" : "DLAA";
+    $("tagRight").textContent = label;
+    $("lensOnTag").textContent = label;
+    lens(lensOff, s.off);
+    lens(lensOn, right);
+    marker.style.left = spot[0] * 100 + "%";
+    marker.style.top = spot[1] * 100 + "%";
+    document.querySelectorAll("[data-scene]").forEach(b => b.setAttribute("aria-pressed", b.dataset.scene === scene));
+    document.querySelectorAll("[data-mode]").forEach(b => {
+      b.setAttribute("aria-pressed", b.dataset.mode === mode);
+      b.disabled = !s[b.dataset.mode];
+    });
+    const spots = $("spots");
+    spots.innerHTML = "<b>Zoom</b>";
+    s.spots.forEach(([name, x, y]) => {
+      const b = document.createElement("button");
+      b.className = "chip"; b.textContent = name;
+      b.setAttribute("aria-pressed", Math.abs(spot[0] - x) < .001 && Math.abs(spot[1] - y) < .001);
+      b.onclick = () => { spot = [x, y]; render(); };
+      spots.appendChild(b);
+    });
+    $("sceneNote").textContent = s.note;
+  }
+  document.querySelectorAll("[data-scene]").forEach(b => b.onclick = () => {
+    scene = b.dataset.scene; spot = scenes[scene].spots[0].slice(1); render();
+  });
+  document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { mode = b.dataset.mode; render(); });
+
+  // Drag the divider; a plain click on the picture moves the zoom spot.
+  let dragging = false;
+  const pos = (e) => { const r = compare.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+  grip.addEventListener("pointerdown", (e) => { dragging = true; grip.setPointerCapture(e.pointerId); e.preventDefault(); });
+  grip.addEventListener("pointermove", (e) => { if (dragging) setSplit(pos(e)[0] * 100); });
+  grip.addEventListener("pointerup", () => { dragging = false; });
+  compare.addEventListener("click", (e) => {
+    if (e.target === grip || grip.contains(e.target)) return;
+    const [x, y] = pos(e);
+    spot = [Math.max(.03, Math.min(.97, x)), Math.max(.05, Math.min(.95, y))];
+    render();
+  });
+  grip.addEventListener("keydown", (e) => {
+    const step = e.shiftKey ? 10 : 2;
+    if (e.key === "ArrowLeft") { setSplit(split - step); e.preventDefault(); }
+    if (e.key === "ArrowRight") { setSplit(split + step); e.preventDefault(); }
+    if (e.key === "Home") { setSplit(0); e.preventDefault(); }
+    if (e.key === "End") { setSplit(100); e.preventDefault(); }
+  });
+  setSplit(50);
+  render();
+
+  // ---- install steps ----
+  const steps = [...document.querySelectorAll(".step")];
+  let done = 0;
+  function showFolder() {
+    steps.forEach((s, i) => {
+      s.classList.toggle("done", i < done);
+      s.querySelector(".tick").setAttribute("aria-label", (i < done ? "Undo step " : "Mark step ") + (i + 1) + (i < done ? "" : " done"));
+    });
+    document.querySelectorAll("#tree [data-after]").forEach(li => {
+      const show = done >= +li.dataset.after;
+      if (show && li.hidden) { li.classList.remove("fresh"); void li.offsetWidth; li.classList.add("fresh"); }
+      li.hidden = !show;
+    });
+    $("folderNote").textContent = done >= 4 ? "Ready. Open the Forge menu in game to switch it on." : "Needs an NVIDIA RTX card and a current driver.";
+  }
+  steps.forEach((s, i) => s.querySelector(".tick").onclick = () => { done = i < done ? i : i + 1; showFolder(); });
+
+  // ---- Forge menu ----
+  const forge = $("forge"), press = $("press");
+  const help = {
+    open: ["Open the menu", "Press <kbd>Insert</kbd> on your keyboard, or the button on the picture. In the real game the menu opens over whatever you're doing."],
+    plugins: ["Open Plugin UI", "Click <b>Plugin UI</b>. It lists every Forge plugin you have; DLSS is one of them."],
+    dlss: ["Open DLSS", "Click <b>DLSS</b> to see its switches. Everything is off until you change something."],
+    ready: ["Switch DLAA on", "Tick <b>DLAA</b>. The picture is smoothed right away and the game's own FXAA goes off. Every change you make is saved."],
+    dlaa: ["DLAA", "NVIDIA's DLSS used as anti-aliasing at full resolution: the stair-stepped edges go, fine detail stays. The game's FXAA is switched off while it's on."],
+    preset: ["DLAA model", "Which of NVIDIA's DLSS models smooths the picture. Default lets DLSS choose; K is the usual one for DLAA. Changing it takes one frame."],
+    mv: ["Camera motion vectors", "Tells DLSS how the picture moves when the camera turns, so scenery and fog stay clean in motion. Leave it on; off is only for comparing."],
+    nr: ["DLSS 5 neural rendering", "Runs after DLAA: relights the scene and adds material detail. Needs <code>nvngx_dlssnr.dll</code> and costs a few milliseconds a frame. Only works with DLAA on."],
+    model: ["Neural rendering model", "Runtime 310.9.16 has two networks: B, newer and faster, which is its default, and A, the previous one. Runtime 310.8 has only one and ignores this."],
+    nrpreset: ["Neural rendering preset", "How strongly the network works, from Light to Overdrive."],
+    strength: ["Neural rendering strength", "How much of the network's change is kept: 0 is none, 1 is what it made, 2 doubles it."]
+  };
+  function say(key) { const [h, p] = help[key]; $("help").innerHTML = "<h3>" + h + "</h3><p>" + p + "</p>"; }
+  function toggle(head, content, open) {
+    head.setAttribute("aria-expanded", open); content.hidden = !open;
+  }
+  function openMenu() {
+    forge.hidden = !forge.hidden;
+    press.hidden = !forge.hidden;
+    if (!forge.hidden) { say($("hPlugins").getAttribute("aria-expanded") === "true" ? ($("hDlss").getAttribute("aria-expanded") === "true" ? "ready" : "dlss") : "plugins"); $("hPlugins").focus(); }
+    else say("open");
+  }
+  $("insertBtn").onclick = openMenu;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Insert") {
+      const r = $("screen").getBoundingClientRect();
+      if (r.bottom > 0 && r.top < innerHeight) { openMenu(); e.preventDefault(); }
+    }
+  });
+  $("hPlugins").onclick = () => { const o = $("hPlugins").getAttribute("aria-expanded") !== "true"; toggle($("hPlugins"), $("cPlugins"), o); say(o ? "dlss" : "plugins"); };
+  $("hDlss").onclick = () => { const o = $("hDlss").getAttribute("aria-expanded") !== "true"; toggle($("hDlss"), $("cDlss"), o); say(o ? "ready" : "dlss"); };
+
+  let saved = null; // nothing written until the first change, like the real menu
+  function current() {
+    return {
+      Mode: $("dlaa").checked ? "DLAA" : "Off",
+      Preset: $("preset").value,
+      MotionVectors: $("mv").checked ? "Camera" : "Off",
+      NeuralRendering: $("nr").checked ? "On" : "Off",
+      NRPreset: $("nrpreset").value,
+      NRModel: $("model").value,
+      NRStrength: (+$("strength").value).toFixed(2)
+    };
+  }
+  function showIni(changedKey) {
+    const ini = $("ini");
+    if (!saved) { ini.innerHTML = '<span class="empty">Nothing yet. The [DLSS] section appears with your first change; until then everything is off.</span>'; return; }
+    ini.innerHTML = "[DLSS]\n" + Object.entries(saved).map(([k, v]) =>
+      (k === changedKey ? '<span class="changed">' : "<span>") + k + " = " + v + "</span>").join("\n");
+  }
+  function status() {
+    const on = $("dlaa").checked;
+    $("status").textContent = "Now: DLAA " + (on ? "on" : "off") + ", neural rendering " + (on && $("nr").checked ? "on" : "off");
+  }
+  const keyOf = { dlaa: "Mode", preset: "Preset", mv: "MotionVectors", nr: "NeuralRendering", model: "NRModel", nrpreset: "NRPreset", strength: "NRStrength" };
+  document.querySelectorAll("[data-help]").forEach(el => {
+    el.addEventListener("focus", () => say(el.dataset.help));
+    el.addEventListener("pointerenter", () => say(el.dataset.help));
+    el.addEventListener("input", () => {
+      if (el.id === "strength") $("strengthVal").textContent = (+el.value).toFixed(2);
+      status();
+      if (el.id !== "strength") { saved = current(); showIni(keyOf[el.id]); say(el.dataset.help); }
+    });
+    // the real slider saves when you let go of it
+    if (el.id === "strength") el.addEventListener("change", () => { saved = current(); showIni("NRStrength"); });
+  });
+  showIni();
+})();
+</script>
+</body>
+</html>

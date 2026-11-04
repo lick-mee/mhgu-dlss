@@ -7,6 +7,30 @@ talks to isn't public.
 
 **Off by default.** Nothing changes until you switch it on in the Forge menu.
 
+**Interactive guide:** [`docs/index.html`](docs/index.html) has a comparison slider with a loupe on real game
+pixels, the install steps and a working copy of the Forge menu. GitHub shows HTML files of a private repository
+as source only, so download the repository (Code → Download ZIP) and open that file in your browser.
+
+## What it changes
+
+The hunter's house at 4K: off, DLAA, DLAA + neural rendering.
+
+![Off, DLAA, DLAA and neural rendering](docs/img/house-strip.webp)
+
+Up close, game pixels drawn twice as large. Left off, right DLAA: the stair-stepped edges go, the detail stays.
+
+The strap on the chest:
+
+![Chest strap, off and DLAA](docs/img/zoom-chest.png)
+
+The edge of the hunter's blade:
+
+![Blade edge, off and DLAA](docs/img/zoom-blade.png)
+
+The sword on the character screen:
+
+![Sword, off and DLAA](docs/img/zoom-sword.png)
+
 ## Install
 
 No build tools needed:
