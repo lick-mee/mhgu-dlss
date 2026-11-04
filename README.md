@@ -7,8 +7,9 @@ this repository or its releases: bring your own.
 
 **Off by default.** Nothing changes until you switch it on in the Forge menu.
 
-**Illustrated guide:** the release zip has a `mhgu-dlss-guide` folder; open its `index.html` in your browser for
-a before/after comparison you can zoom into, the install steps and a working copy of the in-game menu.
+**[Open the illustrated guide](https://lick-mee.github.io/mhgu-dlss/):** a before/after comparison you can zoom
+into, the install steps and a working copy of the in-game menu. The release zip has the same guide for offline
+use, in its `mhgu-dlss-guide` folder.
 
 ## What it changes
 
