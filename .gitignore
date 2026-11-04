@@ -1,5 +1,6 @@
 # build output and generated forwarders
 build/
+dist/
 src/exports.S
 # NVIDIA's runtimes are never part of this repository
 *.dll

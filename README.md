@@ -9,11 +9,13 @@ talks to isn't public.
 
 ## Install
 
-Next to `mhgurecomp.exe`:
+No build tools needed:
 
-- `vulkan-1.dll` and `mhgudlss_nvngx.dll` from `build/` (or `sh build.sh --install`)
-- NVIDIA's `nvngx_dlss.dll` (DLSS/DLAA) and, for neural rendering, `nvngx_dlssnr.dll`: not in this repository,
-  bring your own.
+1. Download `mhgu-dlss-v<version>.zip` from [Releases](https://github.com/lick-mee/mhgu-dlss/releases) and
+   extract it into the folder with `mhgurecomp.exe` (`vulkan-1.dll` and `mhgudlss_nvngx.dll` land next to it).
+2. Put NVIDIA's `nvngx_dlss.dll` (DLSS/DLAA) there too and, for neural rendering, `nvngx_dlssnr.dll`. They're
+   not in the zip or this repository: bring your own.
+3. Start the game and switch it on in the Forge menu (below).
 
 Needs an NVIDIA RTX card and a current driver. Uninstall: delete `vulkan-1.dll` and `mhgudlss_nvngx.dll`.
 
@@ -55,13 +57,14 @@ NRToggleKey = End
 
 ## Build
 
-Needs Zig (`ZIG=`, default `H:/Games/MHGU/tools/zig-x86_64-windows-0.17.0/zig.exe`), Python 3 with `pefile`,
+Only for changing the code; the release zip is all you need to play. Needs Zig (`ZIG=`, default `H:/Games/MHGU/tools/zig-x86_64-windows-0.17.0/zig.exe`), Python 3 with `pefile`,
 the Vulkan headers and NVIDIA's DLSS SDK headers (`SDK=`, default `H:/Games/MHGU/tools/sdk` with
 `vulkan-headers/include` and `dlss/include`).
 
 ```sh
 sh build.sh            # build/vulkan-1.dll, build/mhgudlss_nvngx.dll
 sh build.sh --install  # and copy them next to mhgurecomp.exe
+sh build.sh --zip      # and pack dist/mhgu-dlss-v<version>.zip (VERSION in build.sh)
 python shaders/compile.py  # after changing a shader: rewrites src/shaders.h
 ```
 
