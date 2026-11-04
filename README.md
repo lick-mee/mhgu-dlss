@@ -2,8 +2,8 @@
 
 NVIDIA DLSS for MHGU Recomp: DLAA (DLSS as anti-aliasing, with camera motion vectors and sub-pixel jitter) and,
 on top of it, DLSS 5 neural rendering. It's a `vulkan-1.dll` proxy next to `mhgurecomp.exe` that forwards every
-Vulkan call to the system's loader and adds the DLSS passes to the game's frame. Private: the DLSS 5 runtime it
-talks to isn't public.
+Vulkan call to the system's loader and adds the DLSS passes to the game's frame. NVIDIA's DLLs aren't part of
+this repository or its releases: bring your own.
 
 **Off by default.** Nothing changes until you switch it on in the Forge menu.
 
