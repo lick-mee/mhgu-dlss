@@ -43,7 +43,6 @@ Sleeve, belt and cloth (the hunter sways a little between the two shots):
 
 ## Install
 
-No build tools needed:
 
 1. Download `mhgu-dlss-v<version>.zip` from [Releases](https://github.com/lick-mee/mhgu-dlss/releases) and
    extract it into the folder with `mhgurecomp.exe` (`vulkan-1.dll` and `mhgudlss_nvngx.dll` land next to it).
@@ -85,22 +84,6 @@ NRStrength = 1.0        ; 0 to 2
 ```
 
 `mhgu-dlss.log` next to the exe says what it found and what failed.
-
-## Build
-
-Only for changing the code; the release zip is all you need to play. Needs Zig (`ZIG=`, default `H:/Games/MHGU/tools/zig-x86_64-windows-0.17.0/zig.exe`), Python 3 with `pefile`,
-the Vulkan headers and NVIDIA's DLSS SDK headers (`SDK=`, default `H:/Games/MHGU/tools/sdk` with
-`vulkan-headers/include` and `dlss/include`).
-
-```sh
-sh build.sh            # build/vulkan-1.dll, build/mhgudlss_nvngx.dll
-sh build.sh --install  # and copy them next to mhgurecomp.exe
-sh build.sh --zip      # and pack dist/mhgu-dlss-v<version>.zip (VERSION in build.sh)
-python shaders/compile.py  # after changing a shader: rewrites src/shaders.h
-```
-
-`gen_exports.py` writes `src/exports.S` (forwarders for every export of the system `vulkan-1.dll`) on each
-build. `FRAME.md` is the map of the game's render passes the insertion points come from.
 
 ## How the menu gets in
 
