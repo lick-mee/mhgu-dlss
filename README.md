@@ -1,6 +1,14 @@
-# mhgu-dlss
+<p align="center">
+  <img src="docs/banner.png" alt="mhgu-dlss: DLAA and neural rendering for Monster Hunter Generations Ultimate on MHGU Recomp" width="100%">
+</p>
 
-NVIDIA DLSS for MHGU Recomp: DLAA (DLSS as anti-aliasing, with camera motion vectors and sub-pixel jitter) and,
+<p align="center">
+  <a href="https://github.com/lick-mee/mhgu-dlss/releases/latest"><b>Download the latest release</b></a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="https://lick-mee.github.io/mhgu-dlss/"><b>Open the illustrated guide</b></a>
+</p>
+
+NVIDIA DLSS for [MHGU Recomp](https://github.com/morerokk/MHGURecomp): DLAA (DLSS as anti-aliasing, with camera motion vectors and sub-pixel jitter) and,
 on top of it, DLSS 5 neural rendering. It's a `vulkan-1.dll` proxy next to `mhgurecomp.exe` that forwards every
 Vulkan call to the system's loader and adds the DLSS passes to the game's frame. NVIDIA's DLLs aren't part of
 this repository or its releases: bring your own.
