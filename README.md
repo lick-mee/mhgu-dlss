@@ -27,9 +27,19 @@ The edge of the hunter's blade:
 
 ![Blade edge, off and DLAA](docs/img/zoom-blade.png)
 
-The sword on the character screen:
+### Character screen
+
+Off and DLAA (neural rendering doesn't run on this screen).
+
+![Character screen, off and DLAA](docs/img/select-strip.webp)
+
+The sword:
 
 ![Sword, off and DLAA](docs/img/zoom-sword.png)
+
+Sleeve, belt and cloth (the hunter sways a little between the two shots):
+
+![Sleeve and cloth, off and DLAA](docs/img/zoom-shield.png)
 
 ## Install
 
