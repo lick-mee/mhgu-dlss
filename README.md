@@ -33,8 +33,7 @@ Press **Insert** in game, open **Plugin UI** and then **DLSS**:
 - **Neural rendering preset**: Light, Moderate, Default, Reference, Overdrive.
 - **Neural rendering strength**: 0 (none) to 2 (doubled); 1 is what the network made.
 
-Every change is saved right away to `[DLSS]` in `mhgurecomp.ini` and used at the next start. Home and End still
-switch DLAA and neural rendering while playing (`ToggleKey`, `NRToggleKey`, not saved: they're for comparing).
+Every change is saved right away to `[DLSS]` in `mhgurecomp.ini` and used at the next start.
 
 ## mhgurecomp.ini
 
@@ -45,12 +44,10 @@ All keys are optional; the menu writes the ones it changes. Defaults in brackets
 Mode = Off              ; Off or DLAA [Off]
 Preset = Default        ; Default, J, K, L, M
 MotionVectors = Camera  ; Camera or Off
-ToggleKey = Home        ; Home, End, PageUp, PageDown, Pause, ScrollLock, F1-F24 or None
 NeuralRendering = Off   ; On or Off [Off]
 NRModel = Default       ; Default, A or B
 NRPreset = Default      ; Light, Moderate, Default, Reference, Overdrive
 NRStrength = 1.0        ; 0 to 2
-NRToggleKey = End
 ```
 
 `mhgu-dlss.log` next to the exe says what it found and what failed.

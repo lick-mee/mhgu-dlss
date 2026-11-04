@@ -104,16 +104,14 @@ enum { MODE_OFF, MODE_DLAA };
 static struct {
 	int mode;
 	int preset;	    // index in presets
-	int toggle_key;	    // virtual key that switches DLSS on and off while playing
 	float jitter_sign[2]; // diagnostics: sign of the jitter reported to DLSS
 	int camera_mv;	    // motion vectors from the camera (else zero)
 	int nr;		    // DLSS 5 Neural Rendering after DLAA
-	int nr_key;	    // switches it on and off while playing
 	float nr_intensity, nr_tone, nr_structure, nr_skin; // the network's own strengths (skin -1: its choice)
 	float nr_strength;  // how much of its change is put back on the picture
 	int nr_model;	    // DLSSNR.Hint.Render.Preset: 0 the runtime's default, 1 model A, 2 model B
 	int nr_preset;	    // index in nr_presets
-} cfg = { MODE_OFF, 0, VK_HOME, { 1, 1 }, 1, 0, VK_END, 1.0f, 0.15f, 0.70f, -1.0f, 1.0f, 0, 2 };
+} cfg = { MODE_OFF, 0, { 1, 1 }, 1, 0, 1.0f, 0.15f, 0.70f, -1.0f, 1.0f, 0, 2 };
 
 static const struct { const char *n; int p; } presets[] = {
 	{ "Default", NVSDK_NGX_DLSS_Hint_Render_Preset_Default }, { "J", NVSDK_NGX_DLSS_Hint_Render_Preset_J },
@@ -141,20 +139,6 @@ static void set_nr_preset(int i)
 	cfg.nr_skin = nr_presets[i].sk;
 }
 
-static int key_by_name(const char *s)
-{
-	static const struct { const char *n; int vk; } keys[] = {
-		{ "Home", VK_HOME }, { "End", VK_END }, { "PageUp", VK_PRIOR }, { "PageDown", VK_NEXT },
-		{ "Pause", VK_PAUSE }, { "ScrollLock", VK_SCROLL }, { "None", 0 },
-	};
-	for (size_t i = 0; i < sizeof keys / sizeof *keys; i++)
-		if (!_stricmp(s, keys[i].n))
-			return keys[i].vk;
-	if ((s[0] == 'F' || s[0] == 'f') && atoi(s + 1) >= 1 && atoi(s + 1) <= 24)
-		return VK_F1 + atoi(s + 1) - 1;
-	return -1;
-}
-
 static char ini_path[MAX_PATH];
 
 static void load_config(void)
@@ -179,22 +163,11 @@ static void load_config(void)
 		if (!_stricmp(v, presets[i].n))
 			cfg.preset = i;
 
-	GetPrivateProfileStringA("DLSS", "ToggleKey", "Home", v, sizeof v, ini);
-	int k = key_by_name(v);
-	if (k >= 0)
-		cfg.toggle_key = k;
-	else
-		dlog("[config] ToggleKey = %s not known, using Home\n", v);
-
 	GetPrivateProfileStringA("DLSS", "MotionVectors", "Camera", v, sizeof v, ini);
 	cfg.camera_mv = _stricmp(v, "Off") != 0;
 
 	GetPrivateProfileStringA("DLSS", "NeuralRendering", "Off", v, sizeof v, ini);
 	cfg.nr = !_stricmp(v, "On");
-	GetPrivateProfileStringA("DLSS", "NRToggleKey", "End", v, sizeof v, ini);
-	k = key_by_name(v);
-	if (k >= 0)
-		cfg.nr_key = k;
 	GetPrivateProfileStringA("DLSS", "NRPreset", "Default", v, sizeof v, ini);
 	for (int i = 0; i < N_NR_PRESETS; i++)
 		if (!_stricmp(v, nr_presets[i].n))
@@ -213,11 +186,11 @@ static void load_config(void)
 	GetPrivateProfileStringA("DLSS", "JitterSignY", "1", v, sizeof v, ini);
 	cfg.jitter_sign[1] = atof(v) < 0 ? -1.0f : 1.0f;
 
-	dlog("[config] %s: Mode %s, Preset %s, ToggleKey %#x, motion vectors %s, jitter signs %+.0f %+.0f\n", ini,
-	     cfg.mode == MODE_OFF ? "Off" : "DLAA", presets[cfg.preset].n, cfg.toggle_key,
+	dlog("[config] %s: Mode %s, Preset %s, motion vectors %s, jitter signs %+.0f %+.0f\n", ini,
+	     cfg.mode == MODE_OFF ? "Off" : "DLAA", presets[cfg.preset].n,
 	     cfg.camera_mv ? "camera" : "off", cfg.jitter_sign[0], cfg.jitter_sign[1]);
-	dlog("[config] neural rendering %s (key %#x), preset %s, model %s: intensity %.2f, local tone %.2f, "
-	     "structure %.2f, skin %.2f, strength %.2f\n", cfg.nr ? "on" : "off", cfg.nr_key,
+	dlog("[config] neural rendering %s, preset %s, model %s: intensity %.2f, local tone %.2f, "
+	     "structure %.2f, skin %.2f, strength %.2f\n", cfg.nr ? "on" : "off",
 	     nr_presets[cfg.nr_preset].n, nr_models[cfg.nr_model], cfg.nr_intensity, cfg.nr_tone, cfg.nr_structure,
 	     cfg.nr_skin, cfg.nr_strength);
 }
@@ -1394,27 +1367,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, const VkPresentI
 {
 	LONG64 f = InterlockedIncrement64(&frame_no);
 
-	if (ngx_ok && cfg.mode != MODE_OFF && cfg.toggle_key && (GetAsyncKeyState(cfg.toggle_key) & 1)) {
-		DWORD pid = 0;
-		GetWindowThreadProcessId(GetForegroundWindow(), &pid);
-		if (pid == GetCurrentProcessId()) {
-			dlss_on = !dlss_on;
-			dlss_reset = 1;
-			set_game_fxaa(dlss_on);
-			dlog("[dlss] frame %lld: switched %s\n", f, dlss_on ? "on" : "off (game FXAA as configured)");
-		}
-	}
-
-	if (ngx_ok && dlss_on && cfg.nr && cfg.nr_key && (GetAsyncKeyState(cfg.nr_key) & 1)) {
-		DWORD pid = 0;
-		GetWindowThreadProcessId(GetForegroundWindow(), &pid);
-		if (pid == GetCurrentProcessId()) {
-			nr.on = !nr.on;
-			nr.reset = 1;
-			dlog("[nr] frame %lld: switched %s\n", f, nr.on ? "on" : "off");
-		}
-	}
-
 	static int was_done = -1;
 	if (dlss_on && (logged_frames < 3 || f % 3600 == 0 || (fr.done != 0) != was_done)) {
 		logged_frames++;
@@ -1537,8 +1489,7 @@ static void init_ngx(void)
 		fxaa_user = *fxaa_flag; // mhgurecomp.ini has been read by now
 	dlss_on = cfg.mode != MODE_OFF;
 	set_game_fxaa(dlss_on);
-	dlog("[dlss] ready: DLAA %s, %s switches it while playing\n", dlss_on ? "on" : "off",
-	     cfg.toggle_key ? "the toggle key" : "no key");
+	dlog("[dlss] ready: DLAA %s (the Forge menu switches it)\n", dlss_on ? "on" : "off");
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice pd, const VkDeviceCreateInfo *ci,
